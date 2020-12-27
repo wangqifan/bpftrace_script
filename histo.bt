@@ -1,0 +1,23 @@
+#!/usr/bin/bpftrace
+
+BEGIN
+{
+	printf("Tracing MySQL query... Hit Ctrl-C to end.\n");
+}
+
+uprobe:/usr/sbin/mysqld:*dispatch_command*
+{
+	@start[tid] = nsecs;
+}
+
+uretprobe:/usr/sbin/mysqld:*dispatch_command*
+/@start[tid]/
+{
+        @usecs = hist((nsecs - @start[tid]) / 1000000);
+        delete(@start[tid]);
+}
+
+END
+{
+	clear(@start);
+}

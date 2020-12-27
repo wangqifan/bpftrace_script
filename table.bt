@@ -1,0 +1,35 @@
+#!/usr/bin/bpftrace
+
+
+
+BEGIN
+{
+	printf("Tracing MySQL query... Hit Ctrl-C to end.\n");
+}
+
+
+uprobe:/usr/sbin/mysqld:*mysqld_show_warnings*
+{
+ //       printf("%s \n",str(arg1));
+}
+
+uprobe:/usr/sbin/mysqld:*push_diagnostics_area*
+{
+       @[ustack] = count();
+        
+}
+
+uprobe:/usr/sbin/mysqld:*push_warning*
+{
+    printf("%d  |  %s ", arg1, str(arg2));
+}
+
+
+uretprobe:/usr/sbin/mysqld:*message_text*
+{
+     printf("%s \n", str(retval));
+}
+
+END
+{
+}

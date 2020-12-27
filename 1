@@ -1,0 +1,27 @@
+#!/usr/bin/bpftrace
+
+BEGIN
+{
+        printf("Tracing mysqld queries slower than %d ms. Ctrl-C to end.\n",
+            $1);
+        printf("%-10s %-6s %6s %s\n", "TIME(ms)", "PID", "MS", "QUERY");
+}
+
+usdt:/usr/sbin/mysqld:mysql:query__start
+{
+        @query[tid] = str(arg0);
+        @start[tid] = nsecs;
+}
+
+usdt:/usr/sbin/mysqld:mysql:query__done
+/@start[tid]/
+{
+        $dur = (nsecs - @start[tid]) / 1000000;
+        if ($dur > $1) {
+                printf("%-10u %-6d %6d %s\n", elapsed / 1000000,
+                    pid, $dur, @query[tid]);
+        }
+        delete(@query[tid]);
+        delete(@start[tid]);
+}
+
